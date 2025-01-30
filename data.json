@@ -1,0 +1,9 @@
+{
+  "font": "Courier",
+  "keys": {
+    "start_key": "num 1",
+    "pause_key": "num 2",
+    "restart_key": "num 3",
+    "delete_key": "num 4"
+  }
+}

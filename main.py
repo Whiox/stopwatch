@@ -4,6 +4,7 @@ from threading import Thread
 from PIL import Image
 import pystray
 import keyboard
+from config import Config
 
 class StopwatchApp:
     def __init__(self):
@@ -13,6 +14,9 @@ class StopwatchApp:
         self.height = self.root.winfo_screenheight()
 
         self.init_window()
+
+        self.keys = Config.get_keys()
+        self.bind_keys()
 
         self.running = False
         self.start_time = 0
@@ -29,14 +33,6 @@ class StopwatchApp:
         )
         self.prev_results_label.place(x=self.width + 380, y=80, width=self.width // 2, anchor="ne")
 
-        self.root.bind("<KeyPress-KP_1>", lambda event: print("KP_1 pressed") or self.start_timer())
-        self.root.bind("<KeyPress-KP_2>", lambda event: print("KP_2 pressed") or self.stop_timer())
-        self.root.bind("<KeyPress-KP_3>", lambda event: print("KP_3 pressed") or self.reset_timer())
-
-        keyboard.add_hotkey("num 1", self.start_timer)
-        keyboard.add_hotkey("num 2", self.stop_timer)
-        keyboard.add_hotkey("num 3", self.reset_timer)
-
         Thread(target=self.create_tray_icon, daemon=True).start()
 
         self.root.mainloop()
@@ -49,7 +45,13 @@ class StopwatchApp:
         self.root.overrideredirect(True)
         self.root.configure(bg="black")
         self.root.wm_attributes("-transparentcolor", "black")
-        self.root.focus_force()  # Принудительно установить фокус на окно
+        self.root.focus_force()
+
+    def bind_keys(self):
+        keyboard.add_hotkey(self.keys['start_key'], self.start_timer)
+        keyboard.add_hotkey(self.keys['pause_key'], self.pause_timer)
+        keyboard.add_hotkey(self.keys['restart_key'], self.reset_timer)
+        keyboard.add_hotkey(self.keys['delete_key'], self.reset_previous)
 
     def update_timer(self):
         while self.running:
@@ -66,25 +68,30 @@ class StopwatchApp:
             self.start_time = time.time() - self.last_elapsed  # Учитываем уже прошедшее время
             Thread(target=self.update_timer, daemon=True).start()
 
-    def stop_timer(self):
+    def pause_timer(self):
         if self.running:
             self.running = False
             self.last_elapsed = time.time() - self.start_time  # Сохраняем прошедшее время
 
     def reset_timer(self):
-        self.running = False
-        self.last_elapsed += time.time() - self.start_time
-        self.previous_results.insert(0, self.timer_label.cget("text"))
-        self.previous_results = self.previous_results[:5]
+        if self.timer_label.cget("text") != "00:00:00":
+            self.running = False
+            self.last_elapsed += time.time() - self.start_time
+            self.previous_results.insert(0, self.timer_label.cget("text"))
+            self.previous_results = self.previous_results[:15]
+            self.update_previous_results()
+            self.last_elapsed = 0
+            self.timer_label.config(text="00:00:00")
+
+    def reset_previous(self):
+        self.previous_results = []
         self.update_previous_results()
-        self.last_elapsed = 0
-        self.timer_label.config(text="00:00:00")
 
     def update_previous_results(self):
         self.prev_results_label.config(text="\n".join(self.previous_results))
 
     def quit_app(self):
-        self.stop_timer()
+        self.pause_timer()
         self.root.destroy()
         self.icon.stop()
 
@@ -92,7 +99,7 @@ class StopwatchApp:
         icon_image = Image.new("RGB", (64, 64), (0, 0, 0))
         menu = pystray.Menu(
             pystray.MenuItem("Старт", lambda: self.start_timer()),
-            pystray.MenuItem("Стоп", lambda: self.stop_timer()),
+            pystray.MenuItem("Стоп", lambda: self.pause_timer()),
             pystray.MenuItem("Сброс", lambda: self.reset_timer()),
             pystray.MenuItem("Выход", self.quit_app)
         )
