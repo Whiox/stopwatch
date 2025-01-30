@@ -4,7 +4,7 @@ from threading import Thread
 from PIL import Image
 import pystray
 import keyboard
-from config import Config
+from config import Config as cfg
 
 class StopwatchApp:
     def __init__(self):
@@ -15,7 +15,7 @@ class StopwatchApp:
 
         self.init_window()
 
-        self.keys = Config.get_keys()
+        self.key_bindings = cfg.get_keys()
         self.bind_keys()
 
         self.running = False
@@ -24,12 +24,12 @@ class StopwatchApp:
         self.previous_results = []
 
         self.timer_label = tk.Label(
-            self.root, text="00:00:00", font=("Courier", 50, "bold"), fg="lime", bg="black", anchor="e"
+            self.root, text="00:00:00", font=(cfg.get_font(), 50, "bold"), fg="lime", bg="black", anchor="e"
         )
         self.timer_label.place(x=self.width, y=0, width=self.width // 2, height=80, anchor="ne")
 
         self.prev_results_label = tk.Label(
-            self.root, text="", font=("Courier", 25, "bold"), fg="lime", bg="black", justify="right"
+            self.root, text="", font=(cfg.get_font(), 25, "bold"), fg="lime", bg="black", justify="right"
         )
         self.prev_results_label.place(x=self.width + 380, y=80, width=self.width // 2, anchor="ne")
 
@@ -48,10 +48,20 @@ class StopwatchApp:
         self.root.focus_force()
 
     def bind_keys(self):
-        keyboard.add_hotkey(self.keys['start_key'], self.start_timer)
-        keyboard.add_hotkey(self.keys['pause_key'], self.pause_timer)
-        keyboard.add_hotkey(self.keys['restart_key'], self.reset_timer)
-        keyboard.add_hotkey(self.keys['delete_key'], self.reset_previous)
+        keyboard.hook(self.on_key_event)
+
+    def on_key_event(self, event):
+        if event.event_type == keyboard.KEY_DOWN:
+            if event.scan_code == self.key_bindings['start_key']:
+                self.start_timer()
+            elif event.scan_code == self.key_bindings['pause_key']:
+                self.pause_timer()
+            elif event.scan_code == self.key_bindings['restart_key']:
+                self.reset_timer()
+            elif event.scan_code == self.key_bindings['delete_key']:
+                self.reset_previous()
+            elif event.scan_code == self.key_bindings['mark_key']:
+                self.mark_timer()
 
     def update_timer(self):
         while self.running:
@@ -65,13 +75,13 @@ class StopwatchApp:
     def start_timer(self):
         if not self.running:
             self.running = True
-            self.start_time = time.time() - self.last_elapsed  # Учитываем уже прошедшее время
+            self.start_time = time.time() - self.last_elapsed
             Thread(target=self.update_timer, daemon=True).start()
 
     def pause_timer(self):
         if self.running:
             self.running = False
-            self.last_elapsed = time.time() - self.start_time  # Сохраняем прошедшее время
+            self.last_elapsed = time.time() - self.start_time
 
     def reset_timer(self):
         if self.timer_label.cget("text") != "00:00:00":
@@ -82,6 +92,11 @@ class StopwatchApp:
             self.update_previous_results()
             self.last_elapsed = 0
             self.timer_label.config(text="00:00:00")
+
+    def mark_timer(self):
+        self.previous_results.insert(0, self.timer_label.cget("text"))
+        self.previous_results = self.previous_results[:15]
+        self.update_previous_results()
 
     def reset_previous(self):
         self.previous_results = []

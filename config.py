@@ -4,7 +4,7 @@ class Config:
     CONFIG_FILE = 'data.json'
 
     @staticmethod
-    def get_keys():
+    def get_font():
         """Чтение ключей из JSON-файла"""
         try:
             with open(Config.CONFIG_FILE, 'r') as f:
