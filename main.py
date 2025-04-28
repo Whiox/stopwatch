@@ -24,15 +24,10 @@ class StopwatchApp:
         self.last_elapsed = 0
         self.previous_results = []
 
-        self.timer_label = tk.Label(
-            self.root, text="00:00:00", font=(Cfg.get_font(), 50, "bold"), fg="lime", bg="black", anchor="e"
-        )
-        self.timer_label.place(x=self.width, y=0, width=self.width // 2, height=80, anchor="ne")
+        self.timer_label = None
+        self.prev_results_label = None
 
-        self.prev_results_label = tk.Label(
-            self.root, text="", font=(Cfg.get_font(), 25, "bold"), fg="lime", bg="black", justify="right"
-        )
-        self.prev_results_label.place(x=self.width + 380, y=80, width=self.width // 2, anchor="ne")
+        self.init_label()
 
         Thread(target=self.create_tray_icon, daemon=True).start()
 
@@ -47,6 +42,17 @@ class StopwatchApp:
         self.root.configure(bg="black")
         self.root.wm_attributes("-transparentcolor", "black")
         self.root.focus_force()
+
+    def init_label(self) -> None:
+        self.timer_label = tk.Label(
+            self.root, text="00:00:00", font=(Cfg.get_font(), 50, "bold"), fg="lime", bg="black", anchor="e"
+        )
+        self.timer_label.place(x=self.width, y=0, width=self.width // 2, height=80, anchor="ne")
+
+        self.prev_results_label = tk.Label(
+            self.root, text="", font=(Cfg.get_font(), 25, "bold"), fg="lime", bg="black", justify="right"
+        )
+        self.prev_results_label.place(x=self.width + 380, y=80, width=self.width // 2, anchor="ne")
 
     def bind_keys(self) -> None:
         keyboard.hook(self.on_key_event)
@@ -93,7 +99,7 @@ class StopwatchApp:
             self.update_previous_results()
             self.last_elapsed = 0
             self.timer_label.config(text="00:00:00")
-
+            
     def mark_timer(self) -> None:
         self.previous_results.insert(0, self.timer_label.cget("text"))
         self.previous_results = self.previous_results[:15]
